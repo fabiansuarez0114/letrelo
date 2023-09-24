@@ -1,63 +1,106 @@
-#include <LiquidCrystal.h>
+ include <SoftwareSerial.h>
+#include <MD_MAX72xx.h>
+#define HARDWARE_TYPE MD_MAX72XX::FC16_HW
+#define NUM_OF_MATRIX 4
+#define CLK_PIN   4
+#define DATA_PIN  2
+#define CS_PIN    3
+int BT_Rx = 10;
+int BT_Tx = 11;
 
-LiquidCrystal lcd(2,3,4,5,6,7);
-void setup()
-{
-  lcd.begin(16,2);
-  lcd.print("GRACIAS");
-  pinMode(13,OUTPUT);
-  pinMode(12,OUTPUT);
-  pinMode(11,OUTPUT); 
+SoftwareSerial BT(BT_Rx,BT_Tx);
+ 
+MD_MAX72XX letrero = MD_MAX72XX(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, NUM_OF_MATRIX);
+ 
+String mensaje = "HOLA";
+String vel;
+String proximo_mensaje;
+long valor;
+long velSlide = 100;
+void setup() {
+ 
+  letrero.begin();
+  BT.begin(9600);
+ 
+  letrero.control(MD_MAX72XX::INTENSITY,5 );
+  letrero.control( MD_MAX72XX::UPDATE, false );
+ 
+  
 }
+void loop() {
 
-void loop()
-{
-      digitalWrite(13,0);
-      digitalWrite(12,0);
-      digitalWrite(11,0);
-      delay(1000);
-      digitalWrite(13,1);
-      digitalWrite(12,0);
-      digitalWrite(11,0);
-      delay(1000);
-      digitalWrite(13,0);
-      digitalWrite(12,1);
-      digitalWrite(11,0);
-      delay(1000);
-      digitalWrite(13,0);
-      digitalWrite(12,0);
-      digitalWrite(11,1);
-      delay(1000);
-            digitalWrite(13,0);
-      digitalWrite(12,0);
-      digitalWrite(11,0);
-      delay(1000);
-      digitalWrite(13,1);
-      digitalWrite(12,0);
-      digitalWrite(11,0);
-      delay(1000);
-      digitalWrite(13,0);
-      digitalWrite(12,1);
-      digitalWrite(11,0);
-      delay(1000);
-      digitalWrite(13,0);
-      digitalWrite(12,0);
-      digitalWrite(11,1);
-      delay(1000);
-      digitalWrite(13,1);
-      digitalWrite(12,1);
-      digitalWrite(11,0);
-      delay(1000);
-      digitalWrite(13,1);
-      digitalWrite(12,0);
-      digitalWrite(11,1);
-      delay(1000);
-      digitalWrite(13,0);
-      digitalWrite(12,1);
-      digitalWrite(11,1);
-      delay(1000);
-      digitalWrite(13,1);
-      digitalWrite(12,1);
-      digitalWrite(11,1);
-      delay(1000);
+  slide_text( velSlide );
+  actualizar_mensaje();
+
+}
+ 
+ // FUNCIÓN MENSAJE
+void actualizar_mensaje(){
+ 
+  while( BT.available() ){
+ 
+    char c = BT.read();
+
+    if (c=='*'){
+        vel =  proximo_mensaje;
+        valor = vel.toFloat();
+        velSlide=map(valor,0,100,200,5);
+      proximo_mensaje = "";
+    
+      break;
+    }    
+  
+    if( c == '\n' ){
+      mensaje = proximo_mensaje;
+      proximo_mensaje = "";
+     
+      break;
+    }
+    else
+     proximo_mensaje+=c;
+    
+  }
+}
+ 
+
+// FUNCIÓN SCROLL TEXTO
+
+void slide_text(int ms_delay){
+  int col = 0;
+  int last_pos;
+  bool completo = false;
+  
+  letrero.clear();
+ 
+  while( completo == false ){
+    last_pos = printText(col, mensaje);
+    
+    delay(ms_delay);
+    col++;
+    if( last_pos > (int)letrero.getColumnCount() )
+      completo = true;
+  }
+}
+ 
+int printText(int pos, const String text){
+
+  int w;
+  
+  for( int i = 0; i < text.length(); i++ ){
+    
+     
+    w = letrero.setChar( pos, text[i] );    
+    pos = pos - w;
+    Serial.println(pos); 
+    letrero.setColumn(pos, B00000000);
+    
+    pos = pos - 1;
+    
+    if( pos < 0 )
+      break;
+      
+  }
+  letrero.update();
+  
+  return pos;
 }
